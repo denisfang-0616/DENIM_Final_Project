@@ -492,4 +492,259 @@ PHD_ECON_RANKINGS = {
     'sydney': 4, 'university of sydney': 4,
     'unsw': 4, 'university of new south wales': 4,
     'monash': 4, 'monash university': 4,
-}
+} 
+
+
+def normalize_name(name):
+    if pd.isna(name) or not name:
+        return ''
+    name = str(name).lower().strip()
+    
+    name = name.replace('université', 'university')
+    name = name.replace('universite', 'university')
+    name = name.replace('universität', 'university')
+    name = name.replace('universitat', 'university')
+    name = name.replace('univercity', 'university')
+    name = name.replace('univesity', 'university')
+    
+    name = re.sub(r'\s+(university|college|institute|school|uni|univ)$', '', name)
+    name = re.sub(r'^the\s+', '', name)
+    name = re.sub(r'[,\.\-\']', ' ', name)
+    name = re.sub(r'\s+', ' ', name).strip()
+    
+    return name
+
+
+def match_university(name, all_rankings):
+    """Try to match university to rankings with flexible matching"""
+    if pd.isna(name) or not name:
+        return None
+    
+    normalized = normalize_name(name)
+    
+    if normalized in all_rankings:
+        return all_rankings[normalized]
+    
+    if len(normalized) <= 2:
+        return None
+    
+    stop_words = {'of', 'the', 'at', 'in', 'and', 'for'}
+    ambiguous_words = {'chicago', 'illinois', 'columbia', 'washington', 'texas'}
+    
+    normalized_words = set(normalized.split()) - stop_words
+    
+    for key, rank in all_rankings.items():
+        key_words = set(key.split()) - stop_words
+        
+        if len(key) <= 2:
+            continue
+        
+        if len(key_words) == 0:
+            continue
+        
+        if len(key_words) == 1:
+            key_word = list(key_words)[0]
+            
+            if key_word in ambiguous_words:
+                if len(normalized_words) == 1 and key_word in normalized_words:
+                    return rank
+                continue
+            
+            if key_word in normalized_words:
+                return rank
+                
+        elif len(key_words) > 1:
+            if key_words.issubset(normalized_words):
+                return rank
+    
+    return None
+
+
+def extract_rank_from_text(text):
+    if pd.isna(text) or not text:
+        return None
+    
+    text_lower = str(text).lower()
+    
+    if 'ivy' in text_lower and 'public' not in text_lower:
+        return 2
+    
+    if any(p in text_lower for p in ['top 5', 'top-5', '#1', '#2', '#3', '#4', '#5']):
+        return 1
+    if any(p in text_lower for p in ['top 10', 'top-10', 't10 ', 'top10']):
+        return 2
+    if any(p in text_lower for p in ['top 15', 'top-15', 'top 20', 'top-20', 't15 ', 't20 ', 'top15', 'top20']):
+        return 3
+    if any(p in text_lower for p in ['top 25', 'top-25', 'top 30', 'top-30', 't25 ', 't30 ', 'top25', 'top30', 'top 35', 'top-35', 'top 40', 'top-40', 't40 ', 'top40']):
+        return 4
+    if any(p in text_lower for p in ['top 50', 'top-50', 't50 ', 'top50', 'top 75', 'top-75', 'top 100', 'top-100', 't100 ', 'top100']):
+        return 5
+    
+    if any(p in text_lower for p in ['tier 1', 'tier-1', 'tier1', 't1 ', ' t1', 't-1', '1st tier', 'first tier', '1st-tier', 'tier i ']):
+        return 2
+    if any(p in text_lower for p in ['tier 2', 'tier-2', 'tier2', 't2 ', ' t2', 't-2', '2nd tier', 'second tier', '2nd-tier', 'tier ii ']):
+        return 3
+    if any(p in text_lower for p in ['tier 3', 'tier-3', 'tier3', 't3 ', ' t3', 't-3', '3rd tier', 'third tier', '3rd-tier', 'tier iii ']):
+        return 4
+    if any(p in text_lower for p in ['tier 4', 'tier-4', 'tier4', 't4 ', ' t4', 't-4', '4th tier', 'fourth tier', '4th-tier']):
+        return 5
+    
+    if 'flagship' in text_lower:
+        return 5
+    if any(p in text_lower for p in ['big 10', 'big ten', 'big10', 'b10 ', 'b1g', 'big-10']):
+        return 4
+    if 'public ivy' in text_lower or 'public-ivy' in text_lower:
+        return 4
+    
+    if any(p in text_lower for p in ['t10 lac', 'top 10 lac', 'top-10 lac', 'top10 lac']):
+        return 4
+    if any(p in text_lower for p in ['t20 lac', 'top 20 lac', 'top-20 lac', 't15 lac', 'top15 lac', 'top20 lac']):
+        return 5
+    
+    if 'r1' in text_lower or 'r-1' in text_lower or ' r1 ' in text_lower:
+        return 5
+    
+    if any(p in text_lower for p in ['canadian top 3', 'top 3 canadian', 'canada top 3']):
+        return 3
+    if any(p in text_lower for p in ['canadian top 5', 'top 5 canadian', 'top canadian']):
+        return 4
+    if 't3 canadian' in text_lower or 't2 canadian' in text_lower:
+        return 4
+    
+    if any(p in text_lower for p in ['best university', 'best in', '#1 in', 'leading university']):
+        return 3
+    
+    if any(p in text_lower for p in ['top public', 'top state', 'best public']):
+        return 4
+    
+    if any(p in text_lower for p in ['elite', 'prestigious', 'reputable', 'well-known']):
+        return 5
+    
+    return None
+
+
+def rank_university_undergrad(name):
+    rank = match_university(name, GLOBAL_UNDERGRAD_RANKINGS)
+    if rank is None:
+        rank = extract_rank_from_text(name)
+    return rank
+
+
+def rank_university_phd(name):
+    rank = match_university(name, PHD_ECON_RANKINGS)
+    return rank
+
+
+def rank_undergrad_institution(institution):
+    if pd.isna(institution) or str(institution).strip() == '':
+        return None
+    rank = rank_university_undergrad(institution)
+    return rank if rank else 5 
+
+
+def rank_phd_schools(schools):
+    if schools is None:
+        return None
+    
+    if isinstance(schools, (list, np.ndarray)):
+        if len(schools) == 0:
+            return None
+        school_list = schools
+    else:
+        if pd.isna(schools):
+            return None
+        school_str = str(schools).strip()
+        if not school_str:
+            return None
+        school_list = [school_str]
+    
+    ranks = []
+    for school in school_list:
+        if school is None:
+            continue
+        if isinstance(school, float) and pd.isna(school):
+            continue
+        if not str(school).strip():
+            continue
+        rank = rank_university_phd(school) 
+        if rank:
+            ranks.append(rank)
+    
+    return min(ranks) if ranks else None
+
+
+def standardize_gpa(gpa, gpa_out_of):
+    if pd.isna(gpa) or pd.isna(gpa_out_of):
+        return None
+    if gpa_out_of == 0 or gpa_out_of is None:
+        return None
+    try:
+        gpa = float(gpa)
+        gpa_out_of = float(gpa_out_of)
+        return round((gpa / gpa_out_of) * 4.0, 2)
+    except (ValueError, TypeError, ZeroDivisionError):
+        return None
+
+
+def has_grad_program(row):
+    has_grad_gpa = pd.notna(row['grad_gpa'])
+    has_grad_inst = pd.notna(row['grad_institution']) and str(row['grad_institution']).strip() != ''
+    return 1 if (has_grad_gpa or has_grad_inst) else 0
+
+
+def has_calculus(math_courses):
+    if math_courses is None:
+        return 0
+    
+    if isinstance(math_courses, (list, np.ndarray)):
+        if len(math_courses) == 0:
+            return 0
+        courses_str = ' '.join(str(c).lower() for c in math_courses)
+    else:
+        if pd.isna(math_courses):
+            return 0
+        courses_str = str(math_courses).lower()
+    
+    patterns = ['calc', 'calculus', 'ap', 'bc']
+    return 1 if any(p in courses_str for p in patterns) else 0
+
+
+def has_linear_algebra(math_courses):
+    if math_courses is None:
+        return 0
+    
+    if isinstance(math_courses, (list, np.ndarray)):
+        if len(math_courses) == 0:
+            return 0
+        courses_str = ' '.join(str(c).lower() for c in math_courses)
+    else:
+        if pd.isna(math_courses):
+            return 0
+        courses_str = str(math_courses).lower()
+    
+    patterns = ['linear', 'lin ', 'matrix', 'vector', 'matrices']
+    return 1 if any(p in courses_str for p in patterns) else 0
+
+
+def has_real_analysis(math_courses):
+    if math_courses is None:
+        return 0
+    
+    if isinstance(math_courses, (list, np.ndarray)):
+        if len(math_courses) == 0:
+            return 0
+        courses_str = ' '.join(str(c).lower() for c in math_courses)
+    else:
+        if pd.isna(math_courses):
+            return 0
+        courses_str = str(math_courses).lower()
+    
+    patterns = [
+        'real', 'mathematical analysis', 'metric spaces', 'advanced analytic',
+        'grad level analysis', 'intro to proofs', 'analysis', ' ra ', ' ra,',
+        'analysis 1', 'analysis 2', 'analysis 3', 'analysis 4',
+        'analysis i', 'analysis ii', 'analysis iii', 'analysis iv', 'analytic'
+    ]
+    
+    return 1 if any(p in courses_str for p in patterns) else 0
+
