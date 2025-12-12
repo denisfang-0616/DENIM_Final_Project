@@ -492,7 +492,7 @@ PHD_ECON_RANKINGS = {
     'sydney': 4, 'university of sydney': 4,
     'unsw': 4, 'university of new south wales': 4,
     'monash': 4, 'monash university': 4,
-} 
+}
 
 
 def normalize_name(name):
@@ -748,3 +748,310 @@ def has_real_analysis(math_courses):
     
     return 1 if any(p in courses_str for p in patterns) else 0
 
+
+def convert_old_gre_to_new(score, is_quant=True):
+    score = int(score)
+    
+    if 130 <= score <= 170:
+        return score
+
+    if is_quant:
+        if score >= 800:
+            return 170
+        elif score >= 760:
+            return 169
+        elif score >= 740:
+            return 168
+        elif score >= 720:
+            return 167
+        elif score >= 700:
+            return 166
+        elif score >= 680:
+            return 165
+        elif score >= 660:
+            return 164
+        elif score >= 640:
+            return 163
+        elif score >= 620:
+            return 162
+        elif score >= 600:
+            return 161
+        elif score >= 580:
+            return 160
+        elif score >= 560:
+            return 159
+        elif score >= 540:
+            return 158
+        elif score >= 520:
+            return 157
+        elif score >= 500:
+            return 156
+        elif score >= 480:
+            return 155
+        elif score >= 460:
+            return 154
+        elif score >= 440:
+            return 153
+        elif score >= 420:
+            return 152
+        elif score >= 400:
+            return 151
+        else:
+            return 150
+    else:
+        if score >= 800:
+            return 170
+        elif score >= 730:
+            return 169
+        elif score >= 700:
+            return 168
+        elif score >= 670:
+            return 167
+        elif score >= 640:
+            return 166
+        elif score >= 610:
+            return 165
+        elif score >= 580:
+            return 164
+        elif score >= 550:
+            return 163
+        elif score >= 520:
+            return 162
+        elif score >= 500:
+            return 161
+        elif score >= 470:
+            return 160
+        elif score >= 450:
+            return 159
+        elif score >= 430:
+            return 158
+        elif score >= 410:
+            return 157
+        elif score >= 390:
+            return 156
+        elif score >= 370:
+            return 155
+        elif score >= 350:
+            return 154
+        else:
+            return 153
+
+
+def process_gre_gmat(row):
+    quant = row['gre_quant']
+    verbal = row['gre_verbal']
+    writing = row['gre_writing']
+    
+    result = {
+        'gre_quant_std': None,
+        'gre_verbal_std': None,
+        'gmat_quant': None,
+        'gmat_verbal': None,
+        'gmat_writing': None
+    }
+    
+    if pd.notna(quant) and quant != 0:
+        quant = int(quant)
+        if 6 <= quant <= 51:
+            result['gmat_quant'] = quant
+            if pd.notna(writing):
+                result['gmat_writing'] = writing
+        elif 130 <= quant <= 200 or 200 <= quant <= 800:
+            result['gre_quant_std'] = convert_old_gre_to_new(quant, is_quant=True)
+    
+    if pd.notna(verbal) and verbal != 0:
+        verbal = int(verbal)
+        if 6 <= verbal <= 51:
+            result['gmat_verbal'] = verbal
+        elif 130 <= verbal <= 200 or 200 <= verbal <= 800:
+            result['gre_verbal_std'] = convert_old_gre_to_new(verbal, is_quant=False)
+    
+    return pd.Series(result)
+
+
+def is_econ_related(major):
+    if pd.isna(major) or str(major).strip() == '':
+        return 0
+    
+    major_lower = str(major).lower()
+    
+    patterns = [
+        'economics', 'accounting', 'finance', 'actuarial', 'business',
+        'econ', 'eco', 'b.b.a', 'bba', 'commerce', 'management'
+    ]
+    
+    return 1 if any(p in major_lower for p in patterns) else 0
+
+
+def categorize_lor(lor_text):
+    if pd.isna(lor_text) or str(lor_text).strip() == '':
+        return {'academic_lor': 0, 'research_lor': 0, 'professional_lor': 0}
+    
+    text = str(lor_text).lower()
+    
+    academic_patterns = [
+        'professor', 'prof ', ' prof,', 'prof.', 'associate prof', 'assistant prof',
+        'lecturer', 'instructor', 'dean', 'chair', 'hod', 'director',
+        'advisor', 'adviser', 'thesis advisor', 'supervisor',
+        'phd', 'dphil', 'postdoc',
+        'course', 'class', 'undergraduate', 'graduate', 'masters',
+        'university', 'college', 'alma mater'
+        ' ra ', 'research assistant', 'research supervisor', 'research advisor', 'research prof',
+        'thesis', 'dissertation',
+        'fed', 'federal reserve',
+        'think tank', 'research institute', 'imf', 'oecd', 'ecb',
+        'co-author', 'co-write',
+        'pre-doc', 'predoc', 'pre-doctoral'
+    ]
+    
+    professional_patterns = [
+        'boss', 'supervisor', 'manager', 'director',
+        'ceo', 'cfo', 'vp', 'partner', 'cbo', 'cso',
+        'employer', 'work', 'company', 'firm', 'industry', 'client',
+        'government', 'agency', 'military',
+        'medical', 'law', 'engineering', 'cs',
+        'non-academic', 'professional'
+    ]
+    
+    academic_score = sum(1 for p in academic_patterns if p in text)
+    professional_score = sum(1 for p in professional_patterns if p in text)
+    
+    if academic_score == 0 and professional_score == 0:
+        return {'academic_lor': 0, 'research_lor': 0, 'professional_lor': 1}
+    
+    result = {'academic_lor': 0, 'research_lor': 0, 'professional_lor': 0}
+    
+    if academic_score > 0:
+        result['academic_lor'] = 1
+    elif professional_score > 0:
+        result['professional_lor'] = 1
+    
+    return result
+
+
+def determine_phd_offer(row):
+    accepted = row['schools_accepted']
+    applied = row['schools_applied']
+    waitlisted = row['schools_waitlisted']
+    rejected = row['schools_rejected']
+    
+    def has_content(field):
+        if field is None:
+            return False
+        if isinstance(field, (list, np.ndarray)):
+            return len(field) > 0
+        if pd.isna(field):
+            return False
+        return bool(str(field).strip())
+    
+    has_accepted = has_content(accepted)
+    has_applied = has_content(applied)
+    has_waitlisted = has_content(waitlisted)
+    has_rejected = has_content(rejected)
+    
+    if has_accepted:
+        return 1
+    elif has_applied or has_waitlisted or has_rejected:
+        return 0
+    else:
+        return None
+
+
+def main():
+    conn = psycopg2.connect(**db_params)
+    df = pd.read_sql("SELECT * FROM admissions_data", conn)
+    
+    df['undergrad_gpa_std'] = df.apply(lambda row: standardize_gpa(row['undergrad_gpa'], row['undergrad_gpa_out_of']), axis=1)
+    df['grad_gpa_std'] = df.apply(lambda row: standardize_gpa(row['grad_gpa'], row['grad_gpa_out_of']), axis=1)
+    df['attended_grad_program'] = df.apply(has_grad_program, axis=1)
+    
+    df['taken_calculus'] = df['math_courses'].apply(has_calculus)
+    df['taken_linear_algebra'] = df['math_courses'].apply(has_linear_algebra)
+    df['taken_real_analysis'] = df['math_courses'].apply(has_real_analysis)
+    
+    gre_gmat_cols = df.apply(process_gre_gmat, axis=1)
+    df = pd.concat([df, gre_gmat_cols], axis=1)
+    
+    df['undergrad_econ_related'] = df['undergrad_major'].apply(is_econ_related)
+    
+    lor_categories = df['letters_of_rec'].apply(categorize_lor)
+    df['academic_lor'] = lor_categories.apply(lambda x: x['academic_lor'])
+    df['research_lor'] = lor_categories.apply(lambda x: x['research_lor'])
+    df['professional_lor'] = lor_categories.apply(lambda x: x['professional_lor'])
+    
+    df['got_phd_offer'] = df.apply(determine_phd_offer, axis=1)
+    df['phd_course_taken'] = df['phd_course_taken'].apply(lambda x: 1 if x == True else (0 if x == False else None))
+    df['research_experience'] = df['research_experience'].apply(lambda x: 1 if x == True else (0 if x == False else None))
+    
+    df['undergrad_rank'] = df['undergrad_institution'].apply(rank_undergrad_institution)
+    df['phd_accepted_rank'] = df.apply(lambda row: rank_phd_schools(row['schools_accepted']), axis=1)
+    
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("DROP TABLE IF EXISTS admissions_data_cleaned CASCADE;")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+    
+    cursor.execute("""
+        CREATE TABLE admissions_data_cleaned AS
+        SELECT * FROM admissions_data WHERE 1=0;
+    """)
+    conn.commit()
+    
+    cursor.execute("""
+        ALTER TABLE admissions_data_cleaned
+        ADD COLUMN undergrad_gpa_std DECIMAL(3,2),
+        ADD COLUMN grad_gpa_std DECIMAL(3,2),
+        ADD COLUMN attended_grad_program INTEGER,
+        ADD COLUMN taken_calculus INTEGER,
+        ADD COLUMN taken_linear_algebra INTEGER,
+        ADD COLUMN taken_real_analysis INTEGER,
+        ADD COLUMN gre_quant_std INTEGER,
+        ADD COLUMN gre_verbal_std INTEGER,
+        ADD COLUMN gmat_quant INTEGER,
+        ADD COLUMN gmat_verbal INTEGER,
+        ADD COLUMN gmat_writing DECIMAL(3,1),
+        ADD COLUMN undergrad_econ_related INTEGER,
+        ADD COLUMN academic_lor INTEGER,
+        ADD COLUMN research_lor INTEGER,
+        ADD COLUMN professional_lor INTEGER,
+        ADD COLUMN got_phd_offer INTEGER,
+        ADD COLUMN undergrad_rank INTEGER,
+        ADD COLUMN phd_accepted_rank INTEGER;
+    """)
+    conn.commit()
+    
+    df['phd_course_taken'] = df['phd_course_taken'].apply(lambda x: None if pd.isna(x) else bool(x))
+    df['research_experience'] = df['research_experience'].apply(lambda x: None if pd.isna(x) else bool(x))
+    
+    cols = df.columns.tolist()
+    cols_str = ', '.join([f'"{col}"' for col in cols])
+    placeholders = ', '.join(['%s'] * len(cols))
+    
+    insert_query = f'INSERT INTO admissions_data_cleaned ({cols_str}) VALUES ({placeholders})'
+    
+    data = []
+    for _, row in df.iterrows():
+        row_data = []
+        for val in row:
+            if isinstance(val, (list, np.ndarray)):
+                row_data.append(list(val))
+            elif val is None or (isinstance(val, float) and np.isnan(val)):
+                row_data.append(None)
+            else:
+                row_data.append(val)
+        data.append(tuple(row_data))
+    
+    execute_batch(cursor, insert_query, data, page_size=1000)
+    conn.commit()
+    
+    csv_filename = "admissions_data_cleaned.csv"
+    df.to_csv(csv_filename, index=False)
+   
+    cursor.close()
+    conn.close()
+
+if __name__ == "__main__":
+    main()
