@@ -10,7 +10,6 @@ import asyncio
 from typing import List, Dict
 import time
 
-# Load environment variables
 load_dotenv()
 
 # Initialize async OpenAI client
@@ -95,6 +94,37 @@ async def extract_single_post(post_id: int, post_content: str, semaphore: asynci
             extracted_data = json.loads(extracted_text)
             extracted_data["original_post_id"] = post_id
             
+            # CLAMP gre_writing to valid range (0-6)
+            if extracted_data.get("gre_writing") is not None:
+                try:
+                    gre_writing = float(extracted_data["gre_writing"])
+                    if gre_writing > 6.0:
+                        extracted_data["gre_writing"] = 6.0
+                    elif gre_writing < 0:
+                        extracted_data["gre_writing"] = None
+                except (ValueError, TypeError):
+                    extracted_data["gre_writing"] = None
+            
+            # CLAMP GPAs to reasonable range (0-100)
+            for gpa_field in ['undergrad_gpa', 'grad_gpa']:
+                if extracted_data.get(gpa_field) is not None:
+                    try:
+                        gpa_val = float(extracted_data[gpa_field])
+                        if gpa_val > 100.0 or gpa_val < 0:
+                            extracted_data[gpa_field] = None
+                    except (ValueError, TypeError):
+                        extracted_data[gpa_field] = None
+            
+            # CLAMP GPA out_of fields
+            for gpa_out_field in ['undergrad_gpa_out_of', 'grad_gpa_out_of']:
+                if extracted_data.get(gpa_out_field) is not None:
+                    try:
+                        gpa_out = float(extracted_data[gpa_out_field])
+                        if gpa_out > 100.0 or gpa_out < 0:
+                            extracted_data[gpa_out_field] = None
+                    except (ValueError, TypeError):
+                        extracted_data[gpa_out_field] = None
+            
             # Cost calculation
             prompt_tokens = response.usage.prompt_tokens
             completion_tokens = response.usage.completion_tokens
@@ -119,7 +149,6 @@ async def extract_single_post(post_id: int, post_content: str, semaphore: asynci
             # Handle rate limiting with exponential backoff
             if '429' in error_str and retry_count < 3:
                 wait_time = (2 ** retry_count) * 3  # 3s, 6s, 12s
-                print(f"    ⏳ Rate limit - waiting {wait_time}s (retry {retry_count+1}/3)...")
                 await asyncio.sleep(wait_time)
                 return await extract_single_post(post_id, post_content, semaphore, retry_count + 1)
             
@@ -130,8 +159,8 @@ async def extract_single_post(post_id: int, post_content: str, semaphore: asynci
             }
 
 
-async def process_batch(posts_df: pd.DataFrame, max_concurrent: int = 7) -> tuple:
-    """Process batch with controlled concurrency (7 workers - ultra-safe)"""
+async def process_batch(posts_df: pd.DataFrame, max_concurrent: int = 10) -> tuple:
+    """Process batch with controlled concurrency"""
     semaphore = asyncio.Semaphore(max_concurrent)
     
     tasks = [
@@ -148,8 +177,63 @@ async def process_batch(posts_df: pd.DataFrame, max_concurrent: int = 7) -> tupl
     return successes, errors, total_cost
 
 
+def sanitize_value(value, field_name):
+    """Convert unexpected types to database-safe values"""
+    # Arrays are fine for array fields
+    if field_name in ['math_courses', 'schools_applied', 'schools_accepted', 'schools_rejected', 'schools_waitlisted']:
+        if isinstance(value, list):
+            # Ensure all items in list are strings, not dicts
+            clean_list = []
+            for item in value:
+                if isinstance(item, dict):
+                    if 'name' in item:
+                        clean_list.append(str(item['name']))
+                    elif item:
+                        clean_list.append(str(list(item.values())[0]))
+                else:
+                    clean_list.append(str(item))
+            return clean_list
+        elif value is None:
+            return []
+        elif isinstance(value, dict):
+            if 'name' in value:
+                return [str(value['name'])]
+            elif value:
+                return [str(list(value.values())[0])]
+            else:
+                return []
+        else:
+            return [str(value)]
+    
+    # For other fields, flatten dicts/lists to strings
+    if isinstance(value, dict):
+        if 'name' in value:
+            return str(value['name'])
+        elif 'value' in value:
+            return str(value['value'])
+        elif value:
+            return str(list(value.values())[0])
+        else:
+            return None
+    elif isinstance(value, list) and value:
+        str_items = []
+        for item in value:
+            if isinstance(item, dict):
+                if 'name' in item:
+                    str_items.append(str(item['name']))
+                elif item:
+                    str_items.append(str(list(item.values())[0]))
+            else:
+                str_items.append(str(item))
+        return ', '.join(str_items) if str_items else None
+    elif isinstance(value, list) and not value:
+        return None
+    else:
+        return value
+
+
 def save_to_database(results: List[Dict], conn):
-    """Save results to database"""
+    """Save results to database with sanitization"""
     if not results:
         return
         
@@ -168,31 +252,32 @@ def save_to_database(results: List[Dict], conn):
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
     """
+    
     data = [
         (
-            r.get("original_post_id"),
-            r.get("undergrad_gpa"),
-            r.get("undergrad_gpa_out_of"),
-            r.get("grad_gpa"),
-            r.get("grad_gpa_out_of"),
-            r.get("gre_quant"),
-            r.get("gre_verbal"),
-            r.get("gre_writing"),
-            r.get("undergrad_institution"),
-            r.get("grad_institution"),
-            r.get("undergrad_major"),
-            r.get("grad_major"),
-            r.get("math_courses", []),
-            r.get("phd_course_taken"),
-            r.get("research_experience"),
-            r.get("publications"),
-            r.get("work_experience_years"),
-            r.get("letters_of_rec"),
-            r.get("schools_applied", []),
-            r.get("schools_accepted", []),
-            r.get("schools_rejected", []),
-            r.get("schools_waitlisted", []),
-            r.get("funding_status")
+            sanitize_value(r.get("original_post_id"), "original_post_id"),
+            sanitize_value(r.get("undergrad_gpa"), "undergrad_gpa"),
+            sanitize_value(r.get("undergrad_gpa_out_of"), "undergrad_gpa_out_of"),
+            sanitize_value(r.get("grad_gpa"), "grad_gpa"),
+            sanitize_value(r.get("grad_gpa_out_of"), "grad_gpa_out_of"),
+            sanitize_value(r.get("gre_quant"), "gre_quant"),
+            sanitize_value(r.get("gre_verbal"), "gre_verbal"),
+            sanitize_value(r.get("gre_writing"), "gre_writing"),
+            sanitize_value(r.get("undergrad_institution"), "undergrad_institution"),
+            sanitize_value(r.get("grad_institution"), "grad_institution"),
+            sanitize_value(r.get("undergrad_major"), "undergrad_major"),
+            sanitize_value(r.get("grad_major"), "grad_major"),
+            sanitize_value(r.get("math_courses", []), "math_courses"),
+            sanitize_value(r.get("phd_course_taken"), "phd_course_taken"),
+            sanitize_value(r.get("research_experience"), "research_experience"),
+            sanitize_value(r.get("publications"), "publications"),
+            sanitize_value(r.get("work_experience_years"), "work_experience_years"),
+            sanitize_value(r.get("letters_of_rec"), "letters_of_rec"),
+            sanitize_value(r.get("schools_applied", []), "schools_applied"),
+            sanitize_value(r.get("schools_accepted", []), "schools_accepted"),
+            sanitize_value(r.get("schools_rejected", []), "schools_rejected"),
+            sanitize_value(r.get("schools_waitlisted", []), "schools_waitlisted"),
+            sanitize_value(r.get("funding_status"), "funding_status")
         )
         for r in results
     ]
@@ -204,32 +289,24 @@ def save_to_database(results: List[Dict], conn):
 async def main():
     start_time = time.time()
     
-    print("="*70)
-    print("GPT EXTRACTION - 7 CONCURRENT WORKERS (ULTRA-SAFE)")
-    print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("="*70)
-    
     # Load posts
-    print("\nLoading posts from filtered_posts...")
     conn = psycopg2.connect(**db_params)
     df_all_posts = pd.read_sql("SELECT id, post_content FROM filtered_posts", conn)
-    print(f"✅ Loaded {len(df_all_posts):,} posts\n")
     
-    # Create table
-    print("Creating admissions_data table...")
+    # Create table with generous field sizes to prevent overflow
     cursor = conn.cursor()
     cursor.execute("""
         DROP TABLE IF EXISTS admissions_data;
         CREATE TABLE admissions_data (
             id SERIAL PRIMARY KEY,
             original_post_id INTEGER,
-            undergrad_gpa DECIMAL(4,2),
-            undergrad_gpa_out_of DECIMAL(4,1),
-            grad_gpa DECIMAL(4,2),
-            grad_gpa_out_of DECIMAL(4,1),
+            undergrad_gpa DECIMAL(5,2),
+            undergrad_gpa_out_of DECIMAL(5,1),
+            grad_gpa DECIMAL(5,2),
+            grad_gpa_out_of DECIMAL(5,1),
             gre_quant INTEGER,
             gre_verbal INTEGER,
-            gre_writing DECIMAL(2,1),
+            gre_writing DECIMAL(3,1),
             undergrad_institution TEXT,
             grad_institution TEXT,
             undergrad_major TEXT,
@@ -251,11 +328,7 @@ async def main():
     """)
     conn.commit()
     cursor.close()
-    print("✅ Table created\n")
     
-    print(f"Processing {len(df_all_posts):,} posts with 7 concurrent workers...")
-    print(f"Estimated time: ~{(len(df_all_posts) / 100):.0f} minutes (~{(len(df_all_posts) / 100 / 60):.1f} hours)")
-    print(f"Estimated cost: ~${0.0003 * len(df_all_posts):.2f}\n")
     
     chunk_size = 100
     total_chunks = (len(df_all_posts) + chunk_size - 1) // chunk_size
@@ -269,9 +342,8 @@ async def main():
         chunk_num = i // chunk_size + 1
         
         chunk_start = time.time()
-        print(f"[{chunk_num}/{total_chunks}] Processing posts {i+1}–{i+len(chunk)}...")
         
-        results, errors, cost = await process_batch(chunk, max_concurrent=7)
+        results, errors, cost = await process_batch(chunk, max_concurrent=10)
         
         chunk_time = time.time() - chunk_start
         total_cost += cost
@@ -294,44 +366,27 @@ async def main():
             eta_minutes = 0
         
         progress = (posts_processed / len(df_all_posts)) * 100
-        print(f"  ✅ {progress:.1f}% | Errors: {len(errors)} | Cost: ${total_cost:.2f} | ETA: {eta_minutes:.0f}m")
         
-        # Longer delay between chunks to avoid rate limits
+        # Small delay between chunks
         if chunk_num < total_chunks:
-            await asyncio.sleep(3)
-        print()
+            await asyncio.sleep(2)
     
     # Final results
     elapsed_total = time.time() - start_time
     
-    print("\n" + "="*70)
-    print("EXTRACTION COMPLETE - SAVING RESULTS")
-    print("="*70)
     
     df_results = pd.read_sql("SELECT * FROM admissions_data ORDER BY id", conn)
     
-    # Save CSV
-    csv_filename = f"admissions_data_extracted_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    # Save CSV with consistent naming
+    csv_filename = "admissions_data_final.csv"
     df_results.to_csv(csv_filename, index=False)
-    print(f"✅ CSV saved: {csv_filename}")
+    print(f"CSV saved: {csv_filename}")
     
-    # Save errors
+    # Save errors if any
     if all_errors:
-        error_file = f"extraction_errors_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        error_file = "extraction_errors.csv"
         pd.DataFrame(all_errors).to_csv(error_file, index=False)
-        print(f"⚠️  Errors saved: {error_file}")
     
-    # Quality metrics
-    print("\n" + "="*70)
-    print("EXTRACTION STATS")
-    print("="*70)
-    print(f"Total time: {elapsed_total/60:.1f} minutes ({elapsed_total/3600:.2f} hours)")
-    print(f"Total cost: ${total_cost:.2f}")
-    print(f"Posts processed: {len(df_results):,}")
-    print(f"Successful: {len(all_results):,}")
-    print(f"Errors: {len(all_errors):,}")
-    print(f"Success rate: {(len(all_results)/len(df_all_posts))*100:.1f}%")
-    print(f"Avg rate: {len(df_all_posts)/(elapsed_total/60):.0f} posts/minute")
     
     print(f"\nField completeness:")
     print(f"  Undergrad GPA: {df_results['undergrad_gpa'].notna().sum():,} ({df_results['undergrad_gpa'].notna().sum()/len(df_results)*100:.1f}%)")
@@ -343,32 +398,8 @@ async def main():
     print(f"  Schools accepted: {df_results['schools_accepted'].apply(lambda x: len(x) if x else 0).sum():,} total")
     print(f"  Schools rejected: {df_results['schools_rejected'].apply(lambda x: len(x) if x else 0).sum():,} total")
     
-    # Sample data
-    print("\n" + "="*70)
-    print("SAMPLE EXTRACTED DATA (First 5 with GPA)")
-    print("="*70)
-    sample = df_results[df_results['undergrad_gpa'].notna()].head(5)
-    if len(sample) > 0:
-        print(sample[['original_post_id', 'undergrad_gpa', 'undergrad_gpa_out_of', 
-                      'gre_quant', 'gre_verbal', 'undergrad_institution']])
-    
-    print("\n" + "="*70)
-    print("NEXT STEPS")
-    print("="*70)
-    print("1. Review extraction quality in DBeaver:")
-    print("   SELECT * FROM admissions_data LIMIT 100;")
-    print("\n2. Filter to posts with actual data:")
-    print("   SELECT * FROM admissions_data")
-    print("   WHERE undergrad_gpa IS NOT NULL")
-    print("      OR gre_quant IS NOT NULL")
-    print("      OR array_length(schools_accepted, 1) > 0;")
-    print("\n3. Build Streamlit dashboard for analysis")
-    print("4. Train ML models for admission prediction")
-    print("="*70)
     
     conn.close()
-    print(f"\n✅ Complete! {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
 
 if __name__ == "__main__":
     asyncio.run(main())
