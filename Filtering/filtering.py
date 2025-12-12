@@ -6,7 +6,6 @@ import os
 import re
 
 load_dotenv()
-
 conn = psycopg2.connect(
     host=os.getenv('DB_HOST'),
     port=int(os.getenv('DB_PORT')),
@@ -14,14 +13,14 @@ conn = psycopg2.connect(
     user=os.getenv('DB_USER'),
     password=os.getenv('DB_PASSWORD')
 )
-
-
 df = pd.read_sql("SELECT * FROM forum_posts", conn)
 
 df['post_length'] = df['post_content'].str.len()
-df = df[(df['post_length'] >= 100) & (df['post_length'] <= 5000)]
+df = df[(df['post_length'] >= 100) & (df['post_length'] <= 5000)] #discarding very small and very large posts
+
 
 def count_strong_signals(text):
+    """Counting number of strong admissions signals"""
     text_lower = str(text).lower()
     
     signals = {
@@ -35,11 +34,11 @@ def count_strong_signals(text):
     
     return sum(signals.values())
 
-df['signal_count'] = df['post_content'].apply(count_strong_signals)
+df['signal_count'] = df['post_content'].apply(count_strong_signals) # Require 2 strong signals
 df = df[df['signal_count'] >= 2]
 
 def calculate_quality_score(text):
-    """Calculate quality score based on content richness"""
+    """Calculating post quality to drop low quality posts"""
     text_lower = str(text).lower()
     score = 0
     
@@ -69,9 +68,10 @@ def calculate_quality_score(text):
     return score
 
 df['quality_score'] = df['post_content'].apply(calculate_quality_score)
-df = df[df['quality_score'] >= 5]
+df = df[df['quality_score'] >= 5] # quality filter
 
 def is_question_only(text):
+    """Removing posts that are just questions"""
     text_lower = str(text).lower()
     question_count = text.count('?')
     
@@ -89,6 +89,7 @@ def is_question_only(text):
 df = df[~df['post_content'].apply(is_question_only)]
 
 def is_generic_response(text):
+    """Filtering out generic posts"""
     text_lower = str(text).lower().strip()
     
     if len(text) < 200:
@@ -120,6 +121,7 @@ exclude_keywords = [
 ]
 
 def is_offtopic(title):
+    """Removing off-topic threads"""
     title_lower = str(title).lower()
     return any(keyword in title_lower for keyword in exclude_keywords)
 
@@ -128,6 +130,7 @@ df = df[~df['thread_title'].apply(is_offtopic)]
 df = df.drop_duplicates(subset=['post_content'], keep='first')
 
 def get_signature(text):
+    """Finding and removing duplicate posts"""
     text_lower = str(text).lower()
     numbers = sorted(re.findall(r'\b\d+\.?\d*\b', text_lower))
     schools = []
