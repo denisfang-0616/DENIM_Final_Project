@@ -30,11 +30,11 @@ The data collection and processing followed a rigorous 7-stage workflow:
 
 4.  **GPT Tools Call:** We utilized **OpenAI's GPT-4o-mini** with the Tools/Function Calling API to extract structured information (GPA, GRE Quant, School Lists) from the filtered text. This process ran via 10 concurrent async workflows over ~6 hours.
 
-5.  **Feature Engineering:** We standardized the raw AI outputs into analytical features:
+5.  **Cleaning and Feature Engineering:** We standardized the raw AI outputs into analytical features:
     * `undergrad_gpa_std`: Standardized diverse scales (10.0, 100%, 4.3) to a 4.0 scale.
-    * 'gre_quant_std' and 'gre_verbal_std': standardized GRE scores to account for old and new versions of the test.
-    * `undergrad_rank`: Mapped institutions to **QS Economics Rankings 2025** (Tiers 1-5).
-    * `taken_real_analysis`/'taken_linear_algebra'/'taken_calculus': Created indicator variables for advanced math coursework.
+    * `gre_quant_std` and `gre_verbal_std`: standardized GRE scores to account for old and new versions of the test.
+    * `undergrad_rank` and `phd_accepted_rank`: Mapped institutions to **QS Economics Rankings 2025**.
+    * `taken_real_analysis`/`taken_linear_algebra`/`taken_calculus`: Indicator variables for advanced math coursework.
 
 ### Data Dictionary
 The final dataset (`admissions_data_cleaned.csv`) is organized with the following columns:
@@ -68,10 +68,11 @@ We create a Python script that uses the Streamlit visualization platform to disp
 The dashboard visualizes results through a combination of pie charts, tables, applicant counts, and detailed breakdowns of test scores/coursework. All calculations exclude null entries and compute proportions only from applicants with relevant data. This ensures accurate comparison of different credential combinations and their effects on admission outcomes.
 
 
-## 3. Prediction models
+## 34. Prediction models
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
-1. **Logistic Regression**: This model considers only data that is available for all feature variables considered. That comes out to be 1332 observations, with about 25% having a positive outcome for admission.
+1. **Logistic Regression**: This probabilistic model uses all of the independent variables to estimate/predict the chances of getting a PhD offer. This model only considers observations with no missing values across all feature variables considered. That comes out to be 1332 observations, with about 25% having a positive outcome for the `got_phd_offer` outcome.
+2. **Gradient Boosting**(`HistGradientBoostingClassifier`): This Machine Learning classifier works by combining many shallow decision trees. We use this model to expand the number of observations considered; Gradient Boosting natively supports missing values by learning rather than imputation. The optimal max depth was 7 when the outcome variable was admission chances (8961 observations) and 3 when the outcome was accepted PhD ranking (2080 observations).
 
 ### Model Performance Metrics
 
@@ -83,6 +84,7 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Admission)** | Test | 0.7590 | 0.5809 | 0.4507 | 0.5076 | 0.7297 | 0.2410 | 0.2410 | - |
 | **Gradient Boosting (Tier)** | Train | - | - | - | - | - | 0.9690 | 0.8493 | 0.1190 |
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
+
 
 ![Confusion Matrices](plots/confusion_matrices.png)
 
