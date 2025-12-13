@@ -75,7 +75,6 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 2. **Gradient Boosting**(`HistGradientBoostingClassifier`): This Machine Learning classifier works by combining many shallow decision trees. We use this model to expand the number of observations considered; Gradient Boosting natively supports missing values by learning rather than imputation. The optimal max depth was 7 when the outcome variable was admission chances (8961 observations) and 3 when the outcome was accepted PhD ranking (2080 observations).
 
 ### Model Performance Metrics
-
 | Model | Dataset | Accuracy | Precision | Recall | F1-Score | AUC-ROC | MSE | MAE | R² |
 |-------|---------|----------|-----------|--------|----------|---------|-----|-----|----|
 | **Logistic Regression (Admission)** | Train | 0.5783 | 0.3233 | 0.6623 | 0.4345 | 0.6596 | - | - | - |
@@ -84,7 +83,6 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Admission)** | Test | 0.7590 | 0.5809 | 0.4507 | 0.5076 | 0.7297 | 0.2410 | 0.2410 | - |
 | **Gradient Boosting (Tier)** | Train | - | - | - | - | - | 0.9690 | 0.8493 | 0.1190 |
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
-
 
 ![Confusion Matrices](plots/confusion_matrices.png)
 
