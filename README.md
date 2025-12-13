@@ -68,7 +68,7 @@ We create a Python script that uses the Streamlit visualization platform to disp
 The dashboard visualizes results through a combination of pie charts, tables, applicant counts, and detailed breakdowns of test scores/coursework. All calculations exclude null entries and compute proportions only from applicants with relevant data. This ensures accurate comparison of different credential combinations and their effects on admission outcomes.
 
 
-## 34. Machine Learning Prediction
+## 4. Machine Learning Prediction
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
 1. **Logistic Regression**: This probabilistic model uses all of the independent variables to estimate/predict the chances of getting a PhD offer. This model only considers observations with no missing values across all feature variables considered. That comes out to be 1332 observations, with about 25% having a positive outcome for the `got_phd_offer` outcome.
@@ -138,7 +138,7 @@ Both models are better at predicting rejections than acceptances. This could be 
 
 ---
 
-## 4. Extensions and Future Research
+## 5. Extensions and Future Research
 
 * **Sentiment Analysis:** Future work could analyze the sentiment of "Statement of Purpose" advice threads to correlate writing style with success.
 * **Letter of Recommendation Proxy:** We could refine the LLM extraction to search for mentions of "famous recommenders" to create a proxy variable for LOR quality.
