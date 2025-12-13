@@ -62,28 +62,68 @@ The final dataset (`admissions_data_cleaned.csv`) is organized with the followin
 
 ---
 
-## 3. Analysis and Findings
-### Methodology
-The analysis is conducted using Python (`pandas`, `scikit-learn`) and visualized using `Streamlit`. We filtered the dataset to exclude incomplete profiles and categorized universities into tiers to visualize the "step function" of admissions requirements. We then trained Random Forest and Logistic Regression models to predict admission probabilities.
+## 3. Streamlit Visualization
+We create a Python script that uses the Streamlit visualization platform to display and summarize the cleaned dataset for interpretation. Users can adjust multiple filters, sliders, and checkboxes to see how changing different feature variables affects the admission outcomes. Each filter adjustment triggers real-time SQL queries against the PostgreSQL database, instantly recalculating acceptance rates, placement distributions, and average statistics. 
 
-### Visualizations
-
-#### Part 1: The "Hard" Filters
-The following histograms illustrate the distribution of GRE Quant scores for successful applicants. The lack of left-tail density suggests a "hard cutoff" exists for top-tier programs.
-
-**Figure 1: GRE Quant Score Distribution by School Tier**
+The dashboard visualizes results through a combination of pie charts, tables, applicant counts, and detailed breakdowns of test scores/coursework. All calculations exclude null entries and compute proportions only from applicants with relevant data. This ensures accurate comparison of different credential combinations and their effects on admission outcomes.
 
 
-#### Part 2: The GPA vs. Tier Correlation
-We analyze the relationship between GPA and school rank. While Top 10 schools show a tight clustering near 4.0, lower-tier schools show significantly higher variance.
+## 3. Prediction models
+The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
-**Figure 2: Boxplot of GPA by Admission Tier**
+## Model Performance Metrics
+
+| Model | Dataset | Accuracy | Precision | Recall | F1-Score | AUC-ROC | MSE | MAE | R² |
+|-------|---------|----------|-----------|--------|----------|---------|-----|-----|----|
+| **Logistic Regression (Admission)** | Train | 0.5783 | 0.3233 | 0.6623 | 0.4345 | 0.6596 | - | - | - |
+| **Logistic Regression (Admission)** | Test | 0.5500 | 0.2929 | 0.5918 | 0.3919 | 0.6157 | - | - | - |
+| **Gradient Boosting (Admission)** | Train | 0.7658 | 0.5948 | 0.4734 | 0.5272 | 0.7651 | 0.2342 | 0.2342 | - |
+| **Gradient Boosting (Admission)** | Test | 0.7590 | 0.5809 | 0.4507 | 0.5076 | 0.7297 | 0.2410 | 0.2410 | - |
+| **Gradient Boosting (Tier)** | Train | - | - | - | - | - | 0.9690 | 0.8493 | 0.1190 |
+| **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
 
 
-#### Part 3: Math Background Importance
-To test the hypothesis that math background is critical, we analyzed acceptance rates based on the completion of Real Analysis.
+### Logistic Regression
 
-**Figure 3: Acceptance Rate by Math Background**
+
+| Feature | Coefficient | Odds Ratio |
+|---------|-------------|------------|
+| **undergrad_gpa_std** | 0.5210 | 1.6837 | 
+| **taken_real_analysis** | 0.3596 | 1.4328 |
+| **academic_lor** | 0.2539 | 1.2890 |
+| **professional_lor** | 0.2511 | 1.2854 |
+| **attended_grad_program** | 0.1083 | 1.1144 |
+| **taken_linear_algebra** | 0.0882 | 1.0922 |
+| **gre_quant_std** | 0.0629 | 1.0649 |
+| **gre_verbal_std** | 0.0354 | 1.0361 |
+| **undergrad_rank** | 0.0245 | 1.0248 |
+| **taken_calculus** | 0.0227 | 1.0229 |
+| **undergrad_econ_related** | -0.0561 | 0.9454 |
+
+
+### Gradient Boosting
+
+| Feature | GB Admission | GB Tier |
+|---------|--------------|---------|
+| **attended_grad_program** | 0.0978 | 0.0320 |
+| **undergrad_gpa_std** | 0.0288 | 0.0439 |
+| **undergrad_rank** | 0.0135 | 0.0144 |
+| **gre_quant_std** | -0.0019 | 0.0258 |
+| **gre_verbal_std** | 0.0053 | 0.0225 |
+| **academic_lor** | 0.0088 | 0.0023 |
+| **professional_lor** | -0.0001 | -0.0009 |
+| **taken_calculus** | 0.0058 | -0.0012 |
+| **taken_linear_algebra** | -0.0004 | -0.0006 |
+| **taken_real_analysis** | -0.0003 | 0.0002 |
+| **undergrad_econ_related** | -0.0007 | 0.0072 |
+
+## Confusion Matrices
+
+| Model | True Negatives | False Positives | False Negatives | True Positives |
+|-------|----------------|-----------------|-----------------|----------------|
+| **Logistic Regression** | 162 | 140 | 40 | 58 |
+| **Gradient Boosting (Admission)** | 1,707 | 241 | 407 | 334 |
+
 
 
 ### Limitations of the Analysis
