@@ -1,0 +1,12 @@
+pandas
+numpy
+psycopg2-binary
+python-dotenv
+scikit-learn
+openai
+matplotlib
+seaborn
+streamlit
+plotly
+requests
+beautifulsoup4
