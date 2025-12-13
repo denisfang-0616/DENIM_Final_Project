@@ -144,9 +144,13 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 
 1.  Clone the repository.
 2.  Install the required dependencies using requirements.txt.
-3.  Run the code () to collect raw forum data.
-4.  Run the code () to upload raw data to Cloud SQL.
-5.  Run the code () to filter noise (130k -> 18.5k posts).
-6.  Run the code () to extract structured profiles via OpenAI API.
-7.  Run the code () to standardize and rank the data.
-8.  Run () to view the interactive visualizations.
+3.  Run the code scraping.py to collect raw forum data. NOTE: Scraping the whole site has an approximate run time of 12 hours. You can adjust "start_page=" and "end_page=" for smaller sample sizes.
+
+**You will need to create/add a .env file with PostgreSQL instance/database and GPT API key information to execute code from here onwards.**
+5.  Run the code raw_data_upload.py to upload raw data to the Cloud SQL database.
+6.  Run the code filtering.py in the folder Filtering to filter noise (130k -> 18.5k posts) and save as a new table in SQL.
+7.  Run the code gpt_tools_call.py in the folder Tools Call to extract structured profiles via the OpenAI API. This will create another table in SQL with extracted results.
+8.  Run the code cleaning.py in the folder cleaning-visualization to standardize and rank the data. This will create another table in SQL that is ready for visualization and analysis.
+9.  Run visualization.py in the folder cleaning-visualization to view the interactive visualizations.
+10. Run chances_gradientboosting.py and tier_gradientboosting.py in the folder Gradient Boosting and logistic_reg.py in the folder Logistic Regression to run all ML models and view performance metrics.
+11. Run confusion_matrix.py in the folder plots to view the confusion matrices for admissions predictions as a heatmap.
