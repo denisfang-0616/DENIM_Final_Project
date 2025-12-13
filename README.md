@@ -71,7 +71,7 @@ The dashboard visualizes results through a combination of pie charts, tables, ap
 ## 3. Prediction models
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
-## Model Performance Metrics
+### Model Performance Metrics
 
 | Model | Dataset | Accuracy | Precision | Recall | F1-Score | AUC-ROC | MSE | MAE | R² |
 |-------|---------|----------|-----------|--------|----------|---------|-----|-----|----|
@@ -81,6 +81,8 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Admission)** | Test | 0.7590 | 0.5809 | 0.4507 | 0.5076 | 0.7297 | 0.2410 | 0.2410 | - |
 | **Gradient Boosting (Tier)** | Train | - | - | - | - | - | 0.9690 | 0.8493 | 0.1190 |
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
+
+![Confusion Matrices](plots/confusion_matrices.png)
 
 
 ### Logistic Regression
