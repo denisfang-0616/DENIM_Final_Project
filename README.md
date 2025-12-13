@@ -71,6 +71,8 @@ The dashboard visualizes results through a combination of pie charts, tables, ap
 ## 3. Prediction models
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
+1. **Logistic Regression**: This model considers only data that is available for all feature variables considered. That comes out to be 1332 observations, with about 25% having a positive outcome for admission.
+
 ### Model Performance Metrics
 
 | Model | Dataset | Accuracy | Precision | Recall | F1-Score | AUC-ROC | MSE | MAE | R² |
