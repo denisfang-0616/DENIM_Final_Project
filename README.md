@@ -85,10 +85,15 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
 
 <br>
+Overall, the Gradient Boosting model does better than the logistic regression model when it comes to prediction, with generally higher scores. However, the Gradient Boosting is more conservative than the Logistic regression and marks more rejections which resulted in a slightly lower Recall.
+
+For PhD tier prediction, MSE/MAE indicate predictions can be off by 1 tier, and the Gradient Boosting model has a very low R-squared value (0.064).
+<br>
 
 ### Confusion Matrices
 ![Confusion Matrices](plots/confusion_matrices.png)
 
+Both models are better at predicting rejections than acceptances. This could be because more of the dataset consists of rejections, and the standards of acceptance have only gotten much harder over time (which our models may not account for).
 
 ### Logistic Regression coefficient estimates (Outcome: acceptance chance)
 
