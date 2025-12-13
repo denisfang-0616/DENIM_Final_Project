@@ -149,8 +149,8 @@ Both models are better at predicting rejections than acceptances. This could be 
 
 1.  Clone the repository.
 2.  Install the required dependencies using requirements.txt.
-3.  Run the code scraping.py to collect raw forum data. NOTE: Scraping the whole site has an approximate run time of 12 hours. You can adjust "start_page=" and "end_page=" for smaller sample sizes.
-4.  Run the code raw_data_upload.py to upload raw data to the Cloud SQL database. **Code implementation for this step and the following steps requires a .env file with database/instance and API key information**
+3.  Run the code scraping.py in the folder Scraping to collect raw forum data. NOTE: Scraping the whole site has an approximate run time of 12 hours. You can adjust "start_page=" and "end_page=" for smaller sample sizes.
+4.  Run the code raw_data_upload.py in the folder Scraping to upload raw data to the Cloud SQL database. **Code implementation for this step and the following steps requires a .env file with database/instance and API key information**
 5.  Run the code filtering.py in the folder Filtering to filter noise (130k -> 18.5k posts) and save as a new table in SQL.
 6.  Run the code gpt_tools_call.py in the folder Tools Call to extract structured profiles via the OpenAI API. This will create another table in SQL with extracted results.
 7.  Run the code cleaning.py in the folder cleaning-visualization to standardize and rank the data. This will create another table in SQL that is ready for visualization and analysis.
