@@ -84,6 +84,10 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Tier)** | Train | - | - | - | - | - | 0.9690 | 0.8493 | 0.1190 |
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
 
+<br>
+<br>
+<br>
+
 ![Confusion Matrices](plots/confusion_matrices.png)
 
 
