@@ -69,7 +69,7 @@ The dashboard visualizes results through a combination of pie charts, tables, ap
 ![Visualization Dashboard](cleaning-visualization/Vis%201.jpg)
 ![Visualization Dashboard](cleaning-visualization/Vis%202.jpg)
 This table illustrates a strong positive correlation between academic metrics and placement tier. Average GPA and both GRE verbal and quantitative scores consistently decrease as program ranking lowers, indicating that elite placements (Top 10/20) demand significantly higher entry benchmarks.
-
+The link of the visualization app: https://denimfinalproject-xey8gnexzzdepsz5r4ziq8.streamlit.app/
 ## 4. Machine Learning Prediction
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
