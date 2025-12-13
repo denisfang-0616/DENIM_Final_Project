@@ -85,10 +85,8 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **Gradient Boosting (Tier)** | Test | - | - | - | - | - | 1.0695 | 0.9027 | 0.0640 |
 
 <br>
-<br>
-<br>
 
-### Confusion Matrix
+### Confusion Matrices
 ![Confusion Matrices](plots/confusion_matrices.png)
 
 
