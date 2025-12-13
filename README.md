@@ -88,10 +88,11 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 <br>
 <br>
 
+### Confusion Matrix
 ![Confusion Matrices](plots/confusion_matrices.png)
 
 
-### Logistic Regression
+### Logistic Regression coefficient estimates (Outcome: acceptance chance)
 
 
 | Feature | Coefficient | Odds Ratio |
@@ -109,7 +110,7 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **undergrad_econ_related** | -0.0561 | 0.9454 |
 
 
-### Gradient Boosting
+### Gradient Boosting feature importance (Outcomes: acceptance chance and acceptance ranking)
 
 | Feature | GB Admission | GB Tier |
 |---------|--------------|---------|
@@ -124,14 +125,6 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 | **taken_linear_algebra** | -0.0004 | -0.0006 |
 | **taken_real_analysis** | -0.0003 | 0.0002 |
 | **undergrad_econ_related** | -0.0007 | 0.0072 |
-
-## Confusion Matrices
-
-| Model | True Negatives | False Positives | False Negatives | True Positives |
-|-------|----------------|-----------------|-----------------|----------------|
-| **Logistic Regression** | 162 | 140 | 40 | 58 |
-| **Gradient Boosting (Admission)** | 1,707 | 241 | 407 | 334 |
-
 
 
 ### Limitations of the Analysis
