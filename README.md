@@ -68,7 +68,7 @@ We create a Python script that uses the Streamlit visualization platform to disp
 The dashboard visualizes results through a combination of pie charts, tables, applicant counts, and detailed breakdowns of test scores/coursework. All calculations exclude null entries and compute proportions only from applicants with relevant data. This ensures accurate comparison of different credential combinations and their effects on admission outcomes.
 
 
-## 34. Prediction models
+## 34. Machine Learning Prediction
 The analysis is conducted using Machine Learning models from sci-kit learn. Each model considers a 70-30 test-train split, cross-validation, and feature optimization using GridSearchCV. We consider two types of models for our analysis:
 
 1. **Logistic Regression**: This probabilistic model uses all of the independent variables to estimate/predict the chances of getting a PhD offer. This model only considers observations with no missing values across all feature variables considered. That comes out to be 1332 observations, with about 25% having a positive outcome for the `got_phd_offer` outcome.
@@ -129,6 +129,7 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 
 * **Correlation vs. Causation:** We can observe that high GRE scores correlate with admission, but cannot control for unobserved variables like Letters of Recommendation (LORs), which are often the decisive factor.
 * **Sample Size:** The number of "complete" profiles for the most recent year (2025) is small compared to historical years, as the cycle is ongoing.
+* **Time-varying analysis:** The Machine Learning models work with cross-sectional data but do not use panel data across time. Therefore, results and effect sizes may be subject to some bias from varying trends in time.
 
 ---
 
@@ -137,11 +138,12 @@ The analysis is conducted using Machine Learning models from sci-kit learn. Each
 * **Sentiment Analysis:** Future work could analyze the sentiment of "Statement of Purpose" advice threads to correlate writing style with success.
 * **Letter of Recommendation Proxy:** We could refine the LLM extraction to search for mentions of "famous recommenders" to create a proxy variable for LOR quality.
 * **Predictive Dashboard:** Deploy the trained model as a public web app where future applicants can input their stats to get a predicted probability range.
+* **Time Series analysis** Use the GPT tools call to extract thread/post dates from raw data and conduct analysis on time-varying trends.
 
 ### Appendix
 
 1.  Clone the repository.
-2.  Install the required dependencies using ().
+2.  Install the required dependencies using requirements.txt.
 3.  Run the code () to collect raw forum data.
 4.  Run the code () to upload raw data to Cloud SQL.
 5.  Run the code () to filter noise (130k -> 18.5k posts).
