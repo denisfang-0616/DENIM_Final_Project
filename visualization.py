@@ -69,7 +69,7 @@ def build_sql_query(filters):
         SUM(CASE WHEN got_phd_offer = 1 THEN 1 ELSE 0 END) as accepted,
         SUM(CASE WHEN phd_accepted_rank IS NOT NULL THEN 1 ELSE 0 END) as has_placement,
         
-        -- Acceptance rate by tier
+        -- Acceptance rate by Ranking
         SUM(CASE WHEN got_phd_offer = 1 AND phd_accepted_rank = 1 THEN 1 ELSE 0 END) as accepted_tier1,
         SUM(CASE WHEN got_phd_offer = 1 AND phd_accepted_rank = 2 THEN 1 ELSE 0 END) as accepted_tier2,
         SUM(CASE WHEN got_phd_offer = 1 AND phd_accepted_rank = 3 THEN 1 ELSE 0 END) as accepted_tier3,
@@ -202,7 +202,7 @@ def get_placement_by_tier(filters):
     df = pd.read_sql(query, conn)
     
     # Map tiers to labels
-    tier_labels = {1: 'Tier 1', 2: 'Tier 2', 3: 'Tier 3', 4: 'Tier 4'}
+    tier_labels = {1: 'Top 10', 2: 'Top 20', 3: 'Top 50', 4: 'Top 100'}
     df['tier_label'] = df['tier'].map(tier_labels)
     
     return df
@@ -248,15 +248,15 @@ def main():
     st.sidebar.markdown("### Background")
     
     undergrad_options = {
-        1: "Tier 1",
-        2: "Tier 2", 
-        3: "Tier 3",
-        4: "Tier 4",
-        5: "Tier 5",
+        1: "Top 10",
+        2: "Top 20", 
+        3: "Top 50",
+        4: "Top 100",
+        5: "100+",
     }
     
     selected_ranks = st.sidebar.multiselect(
-        "Undergrad Institution Tier",
+        "Undergrad Institution Rankings",
         options=list(undergrad_options.keys()),
         format_func=lambda x: undergrad_options[x],
         default=[]
@@ -273,11 +273,11 @@ def main():
     filters['has_real_analysis'] = st.sidebar.checkbox("Took Real Analysis", value=False)
     
 
-    st.sidebar.markdown("### 🔬 Experience")
+    st.sidebar.markdown("### Experience")
     filters['has_research'] = st.sidebar.checkbox("Has research experience", value=False)
     
 
-    if st.sidebar.button("🔄 Reset All Filters"):
+    if st.sidebar.button(" Reset All Filters"):
         st.rerun()
     
 
@@ -343,7 +343,7 @@ def main():
                     tier_data,
                     values='count',
                     names='tier_label',
-                    title='Distribution of PhD Placements by School Tier',
+                    title='Distribution of PhD Placements by School Ranking',
                     color_discrete_sequence=px.colors.sequential.Blues_r
                 )
                 fig.update_traces(textposition='inside', textinfo='percent+label')
@@ -362,10 +362,10 @@ def main():
             total_placed = tier1 + tier2 + tier3 + tier4
             
             if total_placed > 0:
-                st.markdown(f"**Tier 1:** {tier1} ({tier1/total_placed*100:.1f}%)")
-                st.markdown(f"**Tier 2:** {tier2} ({tier2/total_placed*100:.1f}%)")
-                st.markdown(f"**Tier 3:** {tier3} ({tier3/total_placed*100:.1f}%)")
-                st.markdown(f"**Tier 4:** {tier4} ({tier4/total_placed*100:.1f}%)")
+                st.markdown(f"**Top 10:** {tier1} ({tier1/total_placed*100:.1f}%)")
+                st.markdown(f"**Top 20:** {tier2} ({tier2/total_placed*100:.1f}%)")
+                st.markdown(f"**Top 50:** {tier3} ({tier3/total_placed*100:.1f}%)")
+                st.markdown(f"**Top 100:** {tier4} ({tier4/total_placed*100:.1f}%)")
             else:
                 st.info("No placement data")
         
@@ -411,12 +411,12 @@ def main():
 
         if len(tier_data) > 0:
             st.markdown("---")
-            st.markdown("## Placement Details by Tier")
+            st.markdown("## Placement Details by Ranking")
             
             display_df = tier_data.copy()
             display_df['percentage'] = (display_df['count'] / display_df['count'].sum() * 100).round(1)
             display_df = display_df[['tier_label', 'count', 'percentage', 'avg_gpa', 'avg_gre_q', 'avg_gre_v']]
-            display_df.columns = ['Tier', 'Students', '%', 'Avg GPA', 'Avg GRE-Q', 'Avg GRE-V']
+            display_df.columns = ['Ranking', 'Students', '%', 'Avg GPA', 'Avg GRE-Q', 'Avg GRE-V']
             
             st.dataframe(
                 display_df,
